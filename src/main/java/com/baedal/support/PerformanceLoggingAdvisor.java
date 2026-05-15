@@ -32,7 +32,7 @@ public class PerformanceLoggingAdvisor implements CallAdvisor {
         if (chatResponse != null && chatResponse.getMetadata() != null) {
             var usage = chatResponse.getMetadata().getUsage();
             if (usage != null) {
-                log.info("[LLM] elapsed={}ms  input={} output={} total={}",
+                log.info("LLM 호출 완료 — {}ms | 입력 토큰: {} | 출력 토큰: {} | 총 토큰: {}",
                         elapsedMs,
                         usage.getPromptTokens(),
                         usage.getCompletionTokens(),
@@ -41,7 +41,7 @@ public class PerformanceLoggingAdvisor implements CallAdvisor {
                 log.info("[LLM] elapsed={}ms  (token usage unavailable)", elapsedMs);
             }
         } else {
-            log.info("[LLM] elapsed={}ms  (no response metadata)", elapsedMs);
+            log.info("LLM 호출 완료 — {}ms (metadata 없음)", elapsedMs);
         }
 
         return response;
