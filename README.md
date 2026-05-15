@@ -83,7 +83,7 @@ Spring AI 기반 배달 상담 에이전트 학습용 스타터 코드입니다.
     ```
 
 - [x]  `SupportResponse` 에 의미 있는 필드 추가 (선택 근거)
-  - `estimatedResolutionMinutes` 예상 해결 시간 : 고객에게 언제까지 해결이 가능한지 대답할 수 잇음
+  - `estimatedResolutionMinutes` 예상 해결 시간 : 고객에게 언제까지 해결이 가능한지 대답할 수 있음
   - `customerSentiment` 고객 감정 상태 : 화가 난 고객을 일반 고객과 동일하게 응대하면 불만이 커짐. 감정 상태로 응대 톤을 조절할 수 있도록 추가
   - `requiresHumanAgent` 사람 상담사 연결 필요 여부 : AI가 처리해선 안되는 케이스(법적 분쟁, 고액 환불 등)을 분별해서 사람에게 넘길 수 있도록 함.
 
