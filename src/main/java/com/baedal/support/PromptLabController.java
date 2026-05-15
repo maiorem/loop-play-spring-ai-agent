@@ -30,7 +30,8 @@ public class PromptLabController {
     @PostMapping
     public PromptLabResult experiment(@RequestBody PromptLabRequest req) {
         var converter = new BeanOutputConverter<>(SupportResponse.class, LENIENT_MAPPER);
-        var client = builder.defaultSystem(req.systemPrompt()).build();
+        String systemPrompt = req.useDefaultPrompt() ? BaedalPrompt.SYSTEM_PROMPT : req.systemPrompt();
+        var client = builder.defaultSystem(systemPrompt).build();
 
         List<SupportResponse> results = new ArrayList<>();
         for (int i = 0; i < req.repeat(); i++) {
@@ -45,6 +46,7 @@ public class PromptLabController {
 
     public record PromptLabRequest(
             String systemPrompt,
+            boolean useDefaultPrompt,
             String message,
             int repeat
     ) {}
