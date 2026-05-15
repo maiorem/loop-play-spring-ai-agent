@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 public class SupportController {
 
     private final ChatClient.Builder builder;
+    private final PerformanceLoggingAdvisor performanceLoggingAdvisor;
 
     private static final ObjectMapper LENIENT_MAPPER = new ObjectMapper()
             .configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
@@ -26,6 +27,7 @@ public class SupportController {
     public SupportResponse triage(@RequestBody ChatRequest req) {
         var converter = new BeanOutputConverter<>(SupportResponse.class, LENIENT_MAPPER);
         return builder.defaultSystem(BaedalPrompt.SYSTEM_PROMPT)
+                .defaultAdvisors(performanceLoggingAdvisor)
                 .build()
                 .prompt()
                 .user(req.message())
