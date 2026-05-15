@@ -25,6 +25,7 @@ public class PromptLabController {
 
     private static final OllamaOptions JSON_OPTIONS = OllamaOptions.builder()
             .format("json")
+            .temperature(0.3)
             .build();
 
     @PostMapping
