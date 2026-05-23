@@ -1,5 +1,6 @@
 package com.baedal.support;
 
+import com.baedal.support.tool.OrderTools;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ public class SupportController {
 
     private final ChatClient.Builder builder;
     private final PerformanceLoggingAdvisor performanceLoggingAdvisor;
+    private final OrderTools orderTools;
 
     private static final ObjectMapper LENIENT_MAPPER = new ObjectMapper()
             .configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
@@ -28,6 +30,7 @@ public class SupportController {
         var converter = new BeanOutputConverter<>(SupportResponse.class, LENIENT_MAPPER);
         return builder.defaultSystem(BaedalPrompt.SYSTEM_PROMPT)
                 .defaultAdvisors(performanceLoggingAdvisor)
+                .defaultTools(orderTools)
                 .build()
                 .prompt()
                 .user(req.message())

@@ -21,18 +21,16 @@ public class AssistantController {
     private final PerformanceLoggingAdvisor performanceAdvisor;
     private final OrderTools orderTools;
 
-    // TODO [1단계-4] 이 엔드포인트에 OrderTools를 등록하라.
-    //
-    // 요구사항:
-    // - builder.defaultSystem(BaedalPrompt.SYSTEM_PROMPT) 로 시스템 프롬프트를 건다.
-    // - builder.defaultAdvisors(performanceAdvisor) 로 관찰 로깅을 건다.
-    // - builder.defaultTools(orderTools) 로 Tool을 등록한다.  <-- 2주차 핵심!
-    // - .build().prompt().user(req.message()).call().content() 로 자연어 응답을 돌려준다.
-    //
-    // 힌트: .defaultTools(...) vs .tools(...) — 전자는 이 컨트롤러의 모든 호출에 적용,
-    //      후자는 개별 호출에만 적용된다. 여기서는 defaultTools()가 맞다.
     @PostMapping
     public String ask(@RequestBody ChatRequest req) {
-        throw new UnsupportedOperationException("TODO [1단계-4]: AssistantController 구현");
+        return builder
+                .defaultSystem(BaedalPrompt.SYSTEM_PROMPT)
+                .defaultAdvisors(performanceAdvisor)
+                .defaultTools(orderTools)
+                .build()
+                .prompt()
+                .user(req.message())
+                .call()
+                .content();
     }
 }
