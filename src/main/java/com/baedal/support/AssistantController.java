@@ -21,7 +21,7 @@ public class AssistantController {
                                PerformanceLoggingAdvisor performanceAdvisor,
                                OrderTools orderTools) {
         this.chatClient = builder
-                .defaultSystem(BaedalPrompt.SYSTEM_PROMPT)
+                .defaultSystem("당신은 배달 상담 AI입니다. 주문 조회, 배달 현황, 취소 요청을 처리합니다. 주문 관련 요청은 반드시 도구를 먼저 호출하여 처리하세요. 도구 호출 전에 다른 텍스트를 출력하지 마세요.")
                 .defaultAdvisors(performanceAdvisor)
                 .defaultTools(orderTools)
                 .build();
