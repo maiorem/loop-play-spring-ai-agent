@@ -58,16 +58,10 @@ public class OrderTools {
                 .orElse(null);
     }
 
-    @Tool(description = """
-            주문을 취소합니다.
-            취소 가능 조건: CREATED(주문 생성) 또는 ACCEPTED(사장님 수락) 상태인 경우에만 취소 가능합니다.
-            취소 불가: COOKING(조리 시작) 이후 상태는 취소할 수 없습니다.
-            멱등성: 이미 취소된 주문을 다시 취소 요청하면 에러가 아닌 ALREADY_CANCELED를 반환합니다.
-            결과 타입: CancelOrderResult의 outcome 필드로 성공/실패 사유를 확인하세요.
-            """)
+    @Tool(description = "고객의 주문을 취소합니다. 취소 불가 상태이거나 존재하지 않는 주문이면 실패 이유를 반환합니다.")
     public CancelOrderResult cancelOrder(
-            @ToolParam(description = "취소할 주문번호. 형식: YYYY-XXXX (예: 2024-1234)") String orderId,
-            @ToolParam(description = "취소 사유. 예: '고객 요청', '메뉴 변경'") String reason) {
+            @ToolParam(description = "취소할 주문번호 (예: 2024-1234)") String orderId,
+            @ToolParam(description = "취소 사유 (예: 고객 요청)") String reason) {
         log.info("[Tool] cancelOrder(orderId={}, reason={})", orderId, reason);
         var orderOpt = orderService.findById(orderId);
         if (orderOpt.isEmpty()) {
