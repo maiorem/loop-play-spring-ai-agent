@@ -23,22 +23,23 @@ public class PromptLabController {
     private static final ObjectMapper LENIENT_MAPPER = new ObjectMapper()
             .configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
 
-    private static final OllamaOptions JSON_OPTIONS = OllamaOptions.builder()
-            .format("json")
-            .temperature(0.3)
-            .build();
-
     @PostMapping
     public PromptLabResult experiment(@RequestBody PromptLabRequest req) {
         var converter = new BeanOutputConverter<>(SupportResponse.class, LENIENT_MAPPER);
-        String systemPrompt = req.useDefaultPrompt() ? BaedalPrompt.SYSTEM_PROMPT : req.systemPrompt();
+        String systemPrompt = req.useDefaultPrompt()
+                ? BaedalPrompt.build(req.includeProhibitions())
+                : req.systemPrompt();
         var client = builder.defaultSystem(systemPrompt).build();
+        var options = OllamaOptions.builder()
+                .format("json")
+                .temperature(req.temperature())
+                .build();
 
         List<SupportResponse> results = new ArrayList<>();
         for (int i = 0; i < req.repeat(); i++) {
             results.add(client.prompt()
                     .user(req.message())
-                    .options(JSON_OPTIONS)
+                    .options(options)
                     .call()
                     .entity(converter));
         }
@@ -48,6 +49,8 @@ public class PromptLabController {
     public record PromptLabRequest(
             String systemPrompt,
             boolean useDefaultPrompt,
+            boolean includeProhibitions,
+            double temperature,
             String message,
             int repeat
     ) {}
