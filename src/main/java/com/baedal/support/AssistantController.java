@@ -1,7 +1,6 @@
 package com.baedal.support;
 
 import com.baedal.support.tool.OrderTools;
-import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,22 +12,24 @@ import org.springframework.web.bind.annotation.*;
  * DEBUG 로그와 함께 보면 Tool이 언제 어떻게 호출되는지 직관적으로 이해할 수 있다.
  */
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/v1/assistant")
 public class AssistantController {
 
-    private final ChatClient.Builder builder;
-    private final PerformanceLoggingAdvisor performanceAdvisor;
-    private final OrderTools orderTools;
+    private final ChatClient chatClient;
 
-    @PostMapping
-    public String ask(@RequestBody ChatRequest req) {
-        return builder
+    public AssistantController(ChatClient.Builder builder,
+                               PerformanceLoggingAdvisor performanceAdvisor,
+                               OrderTools orderTools) {
+        this.chatClient = builder
                 .defaultSystem(BaedalPrompt.SYSTEM_PROMPT)
                 .defaultAdvisors(performanceAdvisor)
                 .defaultTools(orderTools)
-                .build()
-                .prompt()
+                .build();
+    }
+
+    @PostMapping
+    public String ask(@RequestBody ChatRequest req) {
+        return chatClient.prompt()
                 .user(req.message())
                 .call()
                 .content();
