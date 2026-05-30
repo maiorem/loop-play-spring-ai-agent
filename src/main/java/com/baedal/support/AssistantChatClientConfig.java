@@ -20,4 +20,16 @@ public class AssistantChatClientConfig {
                 .defaultTools(orderTools)
                 .build();
     }
+
+    @Bean
+    public ChatClient supportChatClient(ChatClient.Builder builder,
+                                        MessageChatMemoryAdvisor memoryAdvisor,
+                                        PerformanceLoggingAdvisor performanceAdvisor,
+                                        OrderTools orderTools) {
+        return builder
+                .defaultSystem(BaedalPrompt.SYSTEM_PROMPT)
+                .defaultAdvisors(memoryAdvisor, performanceAdvisor)
+                .defaultTools(orderTools)
+                .build();
+    }
 }
