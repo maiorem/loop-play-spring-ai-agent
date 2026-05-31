@@ -7,6 +7,8 @@ import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 
 @Configuration
 public class ChatMemoryConfig {
@@ -14,6 +16,8 @@ public class ChatMemoryConfig {
     private static final int MAX_MESSAGES = 20;
 
     @Bean
+    @Primary
+    @Profile("!jdbc")
     public ChatMemoryRepository chatMemoryRepository() {
         return new InMemoryChatMemoryRepository();
     }
