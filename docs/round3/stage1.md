@@ -4,6 +4,8 @@
 
 ### 시나리오 1 — 지시 대명사 "그거" (같은 세션)
 
+> **기대와 다른 결과**: 과제 기대는 2회차에서 `getDeliveryStatus(2024-1234)` 재호출이었지만, 실제로는 Tool을 호출하지 않고 Memory에서 답을 꺼냈다. 원인 분석은 회고 1, 4 참조.
+
 **요청**
 
 ```bash
@@ -354,6 +356,9 @@ curl -s -X POST http://localhost:8080/api/v1/assistant \
 # Memory 삭제
 curl -s -X DELETE http://localhost:8080/api/v1/session/cust-A5
 
+# DELETE 직후 Memory 상태 확인 (새 질문 전)
+curl -s http://localhost:8080/api/v1/session/cust-A5/messages | jq
+
 # 삭제 후 "그거" 질문
 curl -s -X POST http://localhost:8080/api/v1/assistant \
   -H "Content-Type: application/json" \
@@ -380,6 +385,12 @@ curl -s -X POST http://localhost:8080/api/v1/assistant \
     "content": "주문번호 2024-1234의 상태는 배달 중입니다. 주문한 음식은 허니콤보(1개)와 콜라 1.25L(1개)이며, 총 금액은 26,000원입니다. 예상 배달 시간은 2026년 5월 30일 오후 6시 24분입니다."
   }
 ]
+```
+
+**DELETE 직후 Memory 상태 (새 질문 전)**
+
+```json
+[]
 ```
 
 **삭제 후 응답**
@@ -564,3 +575,12 @@ Round 3에서 `ASSISTANT_PROMPT` 상수로 정리하면서 두 가지 지시를 
 | JWT 서명 검증 | 세션 ID를 서버의 비밀키로 서명된 JWT로 대체. 서버에서 매 요청마다 서명 검증 |
 | 소유권 바인딩 | 세션 ID와 인증된 사용자 ID를 서버에서 매핑. 세션 ID가 맞아도 소유자 불일치 시 거부 |
 
+---
+
+## 자가 점검 체크리스트
+
+- [x] `./gradlew bootRun`으로 프로젝트가 정상 실행됐다. `Started BaedalSupportApplication in 0.806 seconds`. `UnsupportedOperationException` 없음.
+- [x] 시나리오 5종의 응답 본문 + Memory 상태 JSON이 모두 있다.
+- [x] 시나리오 4에서 `/api/v1/session/cust-B4/messages`로 세션 B Memory에 cust-A4 대화가 없음을 확인했다.
+- [x] 시나리오 5에서 `DELETE` 직후 `/api/v1/session/cust-A5/messages`가 `[]`를 반환했다.
+- [x] `MAX_MESSAGES` 선택 근거 + 세션 ID 설계 결정 4개 질문의 답이 있다.
