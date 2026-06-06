@@ -22,13 +22,6 @@ public class SupportController {
 
     private final ChatClient chatClient;
 
-    // TODO [1단계-I] SupportController에도 동일한 Advisor 체인(memory → rag → performance)을 적용하라.
-    //
-    // 요구사항: 아래 생성자의 .defaultAdvisors(...)를 다음과 같이 바꾼다.
-    //   .defaultAdvisors(memoryAdvisor, ragAdvisor, performanceAdvisor)
-    //
-    // AssistantController와 완전히 동일한 순서여야 한다 — 두 엔드포인트가
-    // 같은 정책 지식과 같은 대화 맥락을 공유해야 일관된 상담이 된다.
     public SupportController(ChatClient.Builder builder,
                              PerformanceLoggingAdvisor performanceAdvisor,
                              MessageChatMemoryAdvisor memoryAdvisor,

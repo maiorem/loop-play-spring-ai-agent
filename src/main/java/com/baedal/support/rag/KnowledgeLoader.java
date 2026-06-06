@@ -96,8 +96,6 @@ public class KnowledgeLoader implements ApplicationRunner {
      * 컨벤션: {@code {category}__{id}.md}
      * <p>
      * 예: {@code refund__refund-basic.md} → category=refund, id=refund-basic
-     * <p>
-     * 이 메서드는 교육 범위가 아니므로 완성 상태로 제공된다.
      */
     private FaqDocument parse(Resource resource) throws Exception {
         String filename = resource.getFilename();  // refund__refund-basic.md
@@ -135,27 +133,9 @@ public class KnowledgeLoader implements ApplicationRunner {
 
     /**
      * 같은 faqId로 이미 VectorStore에 저장된 문서가 있는지 확인한다.
+     * VectorStore 인터페이스에 단건 조회 API가 없으므로 filterExpression으로 대체한다.
      */
     private boolean alreadyLoaded(String faqId) {
-        // TODO [1단계-F] 중복 적재 방지 로직을 구현하라.
-        //
-        // 요구사항:
-        //   SearchRequest req = SearchRequest.builder()
-        //           .query("정책")                            // 아무 쿼리나 OK — filter로만 걸러짐
-        //           .topK(1)
-        //           .similarityThresholdAll()                 // 유사도 임계값 없음
-        //           .filterExpression("faqId == '" + faqId + "'")
-        //           .build();
-        //   return !vectorStore.similaritySearch(req).isEmpty();
-        //
-        // 왜 이 방법을 쓰는가:
-        //   - Spring AI의 VectorStore 인터페이스에는 "id로 한 건 조회"가 없다.
-        //   - 필요한 건 "이미 있는지의 yes/no" 뿐이므로 similaritySearch + filter로 충분하다.
-        //
-        // 설계 결정 질문 (README):
-        //   - 프로덕션에서는 이 방식의 어떤 한계가 있는가?
-        //     (힌트: 문서 "내용이 바뀌었을 때"는 감지 못 한다. 해시 기반 전략과 비교하라.)
-        //
         SearchRequest req = SearchRequest.builder()
                 .query("정책")
                 .topK(1)
