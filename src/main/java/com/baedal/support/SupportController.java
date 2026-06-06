@@ -36,15 +36,14 @@ public class SupportController {
                              OrderTools orderTools) {
         this.chatClient = builder
                 .defaultSystem(BaedalPrompt.SYSTEM_PROMPT)
-                // TODO: ragAdvisor를 memoryAdvisor 다음, performanceAdvisor 앞에 추가하라.
-                .defaultAdvisors(memoryAdvisor, performanceAdvisor)
+                .defaultAdvisors(memoryAdvisor, ragAdvisor, performanceAdvisor)
                 .defaultTools(orderTools)
                 .build();
     }
 
     @PostMapping
     public SupportResponse triage(@RequestBody ChatRequest req,
-                                  @RequestHeader(value = "X-Session-Id", defaultValue = "default") String sessionId) {
+                                  @RequestHeader("X-Session-Id") String sessionId) {
         return chatClient.prompt()
                 .user(req.message())
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, sessionId))

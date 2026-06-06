@@ -60,15 +60,14 @@ public class AssistantController {
                                OrderTools orderTools) {
         this.chatClient = builder
                 .defaultSystem(BaedalPrompt.SYSTEM_PROMPT)
-                // TODO: memoryAdvisor 다음, performanceAdvisor 앞에 ragAdvisor를 추가하라.
-                .defaultAdvisors(memoryAdvisor, performanceAdvisor)
+                .defaultAdvisors(memoryAdvisor, ragAdvisor, performanceAdvisor)
                 .defaultTools(orderTools)
                 .build();
     }
 
     @PostMapping
     public String ask(@RequestBody ChatRequest req,
-                      @RequestHeader(value = "X-Session-Id", defaultValue = "default") String sessionId) {
+                      @RequestHeader("X-Session-Id") String sessionId) {
 
         log.info("[Assistant] sessionId={}, message={}", sessionId, req.message());
 
