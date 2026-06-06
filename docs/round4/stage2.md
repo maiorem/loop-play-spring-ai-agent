@@ -203,6 +203,8 @@ weather-delay: 8개 / refund-after-delivered: 7개 / refund-basic: 8개 = 총 49
 
 ## 실패 관찰 — 청크가 너무 작을 때 (실험 B, chunkSize=100)
 
+> Spring AI 1.0의 `QuestionAnswerAdvisor`는 주입한 Context 원문을 DEBUG 로그에 별도로 출력하지 않는다. Context 블록은 토큰 차이(실험 A 2336 vs 실험 B 1660, -676)와 응답 내용 비교로 간접 확인한다.
+
 **질문**: "비 오는 날 배달이 늦으면 보상 받을 수 있나요?"
 
 **실험 B 응답**:
