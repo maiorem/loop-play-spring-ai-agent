@@ -36,6 +36,23 @@ public class AssistantController {
 
     private final ChatClient chatClient;
 
+    // TODO [1단계-G] Advisor 체인에 ragAdvisor를 추가하라.
+    //
+    // 요구사항: 아래 생성자의 .defaultAdvisors(...)를 다음과 같이 바꾼다.
+    //   .defaultAdvisors(memoryAdvisor, ragAdvisor, performanceAdvisor)
+    //                    ^^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^
+    //                    order=10       order=20    order=100
+    //
+    // 순서 주의: memoryAdvisor가 먼저, ragAdvisor가 두 번째, performanceAdvisor가 마지막.
+    // Memory가 "아까 그 주문"의 orderId를 복원한 후 RAG가 "그 주문의 환불 정책"을 검색해야 한다.
+    //
+    // (이미 ragAdvisor는 생성자 파라미터로 주입받고 있다 — 체인에 끼우기만 하면 된다.)
+    //
+    // 설계 결정 질문 (README):
+    //   - memoryAdvisor와 ragAdvisor의 순서를 뒤바꾸면 어떤 품질 저하가 생기는가?
+    //     (힌트: "아까 그 주문 환불 돼요?" 질문에서 RAG가 먼저 실행되면 "그 주문"이 뭐인지
+    //            알 수 없어 아무 정책이나 검색하게 된다)
+    //   - 실제로 반대 순서가 더 나은 상황은 존재하는가? (5주차 Guardrail과 연결해 생각해 보라)
     public AssistantController(ChatClient.Builder builder,
                                PerformanceLoggingAdvisor performanceAdvisor,
                                MessageChatMemoryAdvisor memoryAdvisor,
@@ -43,14 +60,15 @@ public class AssistantController {
                                OrderTools orderTools) {
         this.chatClient = builder
                 .defaultSystem(BaedalPrompt.SYSTEM_PROMPT)
-                .defaultAdvisors(memoryAdvisor, ragAdvisor, performanceAdvisor)
+                // TODO: memoryAdvisor 다음, performanceAdvisor 앞에 ragAdvisor를 추가하라.
+                .defaultAdvisors(memoryAdvisor, performanceAdvisor)
                 .defaultTools(orderTools)
                 .build();
     }
 
     @PostMapping
     public String ask(@RequestBody ChatRequest req,
-                      @RequestHeader("X-Session-Id") String sessionId) {
+                      @RequestHeader(value = "X-Session-Id", defaultValue = "default") String sessionId) {
 
         log.info("[Assistant] sessionId={}, message={}", sessionId, req.message());
 

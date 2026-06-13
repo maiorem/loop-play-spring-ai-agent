@@ -71,19 +71,31 @@ public class KnowledgeLoader implements ApplicationRunner {
                 continue;
             }
 
-            Document doc = new Document(
-                    faq.id(),
-                    faq.content(),
-                    Map.of(
-                            "faqId",    faq.id(),
-                            "title",    faq.title(),
-                            "category", faq.category()
-                    ));
-            List<Document> chunks = tokenTextSplitter.apply(List.of(doc));
-            vectorStore.add(chunks);
-            loaded++;
-            log.info("[KnowledgeLoader] 적재 완료 — id={} / 청크={}개 / 카테고리={}",
-                    faq.id(), chunks.size(), faq.category());
+            // TODO [1단계-E] FaqDocument → Spring AI Document 변환 + VectorStore 적재.
+            //
+            // 요구사항:
+            //   1) Document doc = new Document(
+            //          faq.id(),
+            //          faq.content(),
+            //          Map.of(
+            //              "faqId",    faq.id(),
+            //              "title",    faq.title(),
+            //              "category", faq.category()
+            //          ));
+            //   2) List<Document> chunks = tokenTextSplitter.apply(List.of(doc));
+            //   3) vectorStore.add(chunks);
+            //   4) loaded++;
+            //   5) log.info("[KnowledgeLoader] 적재 완료 — id={} / 청크={}개 / 카테고리={}",
+            //                faq.id(), chunks.size(), faq.category());
+            //
+            // 왜 metadata에 faqId/title/category를 넣는가:
+            //   - 중복 적재 방지: 아래 alreadyLoaded() 가 filterExpression으로 faqId를 검사한다.
+            //   - 검색 후 출처 표기: metadata.title로 "어떤 정책 문서를 인용했는지" 로그에 찍을 수 있다.
+            //   - 카테고리 필터: 필요시 "환불 카테고리 안에서만 검색" 같은 필터를 쓸 수 있다.
+            //
+            // 설계 결정 질문 (README):
+            //   - 왜 tokenTextSplitter.apply()로 쪼개는가? 원본 Document 한 개로 넣으면 뭐가 달라지는가?
+            //   - vectorStore.add(chunks)는 내부적으로 무엇을 하는가? (힌트: EmbeddingModel 호출)
         }
 
         log.info("[KnowledgeLoader] RAG 시드 완료 — 신규 {}건 / 스킵 {}건 / 총 {}건",
@@ -96,6 +108,8 @@ public class KnowledgeLoader implements ApplicationRunner {
      * 컨벤션: {@code {category}__{id}.md}
      * <p>
      * 예: {@code refund__refund-basic.md} → category=refund, id=refund-basic
+     * <p>
+     * 이 메서드는 교육 범위가 아니므로 완성 상태로 제공된다.
      */
     private FaqDocument parse(Resource resource) throws Exception {
         String filename = resource.getFilename();  // refund__refund-basic.md
@@ -133,15 +147,29 @@ public class KnowledgeLoader implements ApplicationRunner {
 
     /**
      * 같은 faqId로 이미 VectorStore에 저장된 문서가 있는지 확인한다.
-     * VectorStore 인터페이스에 단건 조회 API가 없으므로 filterExpression으로 대체한다.
      */
     private boolean alreadyLoaded(String faqId) {
-        SearchRequest req = SearchRequest.builder()
-                .query("정책")
-                .topK(1)
-                .similarityThresholdAll()
-                .filterExpression("faqId == '" + faqId + "'")
-                .build();
-        return !vectorStore.similaritySearch(req).isEmpty();
+        // TODO [1단계-F] 중복 적재 방지 로직을 구현하라.
+        //
+        // 요구사항:
+        //   SearchRequest req = SearchRequest.builder()
+        //           .query("정책")                            // 아무 쿼리나 OK — filter로만 걸러짐
+        //           .topK(1)
+        //           .similarityThresholdAll()                 // 유사도 임계값 없음
+        //           .filterExpression("faqId == '" + faqId + "'")
+        //           .build();
+        //   return !vectorStore.similaritySearch(req).isEmpty();
+        //
+        // 왜 이 방법을 쓰는가:
+        //   - Spring AI의 VectorStore 인터페이스에는 "id로 한 건 조회"가 없다.
+        //   - 필요한 건 "이미 있는지의 yes/no" 뿐이므로 similaritySearch + filter로 충분하다.
+        //
+        // 설계 결정 질문 (README):
+        //   - 프로덕션에서는 이 방식의 어떤 한계가 있는가?
+        //     (힌트: 문서 "내용이 바뀌었을 때"는 감지 못 한다. 해시 기반 전략과 비교하라.)
+        //
+        // 힌트: 지금은 일단 false를 반환해 빌드가 되게만 해두고, 위 코드를 채워라.
+        //       false로 두면 재기동마다 동일 문서가 또 쌓이는 것을 관찰하게 된다(실패 관찰).
+        return false;
     }
 }

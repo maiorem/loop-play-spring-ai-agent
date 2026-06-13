@@ -22,6 +22,13 @@ public class SupportController {
 
     private final ChatClient chatClient;
 
+    // TODO [1단계-I] SupportController에도 동일한 Advisor 체인(memory → rag → performance)을 적용하라.
+    //
+    // 요구사항: 아래 생성자의 .defaultAdvisors(...)를 다음과 같이 바꾼다.
+    //   .defaultAdvisors(memoryAdvisor, ragAdvisor, performanceAdvisor)
+    //
+    // AssistantController와 완전히 동일한 순서여야 한다 — 두 엔드포인트가
+    // 같은 정책 지식과 같은 대화 맥락을 공유해야 일관된 상담이 된다.
     public SupportController(ChatClient.Builder builder,
                              PerformanceLoggingAdvisor performanceAdvisor,
                              MessageChatMemoryAdvisor memoryAdvisor,
@@ -29,14 +36,15 @@ public class SupportController {
                              OrderTools orderTools) {
         this.chatClient = builder
                 .defaultSystem(BaedalPrompt.SYSTEM_PROMPT)
-                .defaultAdvisors(memoryAdvisor, ragAdvisor, performanceAdvisor)
+                // TODO: ragAdvisor를 memoryAdvisor 다음, performanceAdvisor 앞에 추가하라.
+                .defaultAdvisors(memoryAdvisor, performanceAdvisor)
                 .defaultTools(orderTools)
                 .build();
     }
 
     @PostMapping
     public SupportResponse triage(@RequestBody ChatRequest req,
-                                  @RequestHeader("X-Session-Id") String sessionId) {
+                                  @RequestHeader(value = "X-Session-Id", defaultValue = "default") String sessionId) {
         return chatClient.prompt()
                 .user(req.message())
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, sessionId))
