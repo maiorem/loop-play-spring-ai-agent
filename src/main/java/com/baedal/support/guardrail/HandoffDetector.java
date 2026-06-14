@@ -59,7 +59,24 @@ public class HandoffDetector {
      *   실제 동작 가능함을 보이라.
      */
     public HandoffDecision detect(String input) {
-        // TODO [3단계-A] 위 명세에 맞춰 우선순위대로 판별하고 적절한 HandoffDecision을 반환하라.
+        if (input == null || input.isBlank()) {
+            return HandoffDecision.none();
+        }
+        if (matchesAny(input, EXPLICIT_PATTERNS)) {
+            return HandoffDecision.handoff(HandoffReason.EXPLICIT_REQUEST,
+                    "네, 바로 상담원에게 연결해 드릴게요. 잠시만 기다려 주세요.\n" +
+                    "상담원 직통 번호: 1600-0987");
+        }
+        if (matchesAny(input, LEGAL_PATTERNS)) {
+            return HandoffDecision.handoff(HandoffReason.LEGAL_ISSUE,
+                    "법적·민원 관련 사안은 전문 상담원이 직접 도와드리겠습니다.\n" +
+                    "상담원 직통 번호: 1600-0987 로 연결해 드릴게요.");
+        }
+        if (matchesAny(input, ANGER_PATTERNS)) {
+            return HandoffDecision.handoff(HandoffReason.HIGH_EMOTION,
+                    "많이 불편하셨을 것 같아 진심으로 죄송합니다. 상담원이 직접 도와드리겠습니다.\n" +
+                    "상담원 직통 번호: 1600-0987");
+        }
         return HandoffDecision.none();
     }
 

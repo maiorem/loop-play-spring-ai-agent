@@ -53,12 +53,23 @@ public final class BaedalPrompt {
             - 이전 턴에서 이미 Tool로 조회한 정보는 다시 Tool을 호출하지 말고 대화 이력에서 재사용합니다.
 
             [정책 인용 규칙]
-            - TODO: 이 섹션을 채워라. (위 TODO [1단계-J] 주석 참고)
-            - TODO: Fallback 문구 / 수치 원문 유지 / 상담 범위 밖 대응 / 복수 정책 우선순위를 규칙으로 작성
+            - Context에서 관련 정책을 찾지 못하면 "해당 정책을 찾지 못했어요. 자세한 내용은 고객센터(1600-0987)로 문의해 주세요."라고 안내합니다.
+            - 정책의 수치(금액, 기간, 비율 등)는 Context 원문 그대로 전달하며 임의로 반올림하거나 단순화하지 않습니다.
+            - 주문/배달/취소/환불 범위 밖 질문(예: "오늘 점심 추천해 줘")에는 Context를 인용하지 않고 "저는 배달 상담만 도와드릴 수 있어요."라고 안내합니다.
+            - 복수의 정책이 관련될 때는 고객 상황(주문 상태, 시간, 금액)에 가장 부합하는 정책을 우선 선택하고, 나머지는 보조 설명으로 언급합니다.
 
             [응답 포맷]
             - 3문장 이내로 요약 → 필요한 추가 정보 요청 → 다음 액션 제안
             """;
+
+    /** PromptLabController 등에서 [금지] 섹션 포함 여부를 실험할 때 사용. */
+    public static String build(boolean includeProhibitions) {
+        if (includeProhibitions) {
+            return SYSTEM_PROMPT;
+        }
+        // [금지] 섹션 제거
+        return SYSTEM_PROMPT.replaceAll("(?s)\\[금지\\].*?(?=\\[)", "");
+    }
 
     private BaedalPrompt() {}
 }

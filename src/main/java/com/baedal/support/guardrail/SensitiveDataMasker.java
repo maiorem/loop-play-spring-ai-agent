@@ -33,9 +33,10 @@ public class SensitiveDataMasker {
      * 도로명 주소 — 매우 대략적 탐지.
      * "서울시 강남구 역삼동 123-45" 같은 형태를 잡는다. 완벽하지 않으므로 마스킹만 적용한다.
      */
+    // "서울시"(시 단독)를 처리하기 위해 optional suffix에 시 추가
     private static final Pattern ROAD_ADDRESS = Pattern.compile(
             "(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충청|전라|경상|제주)" +
-                    "(?:특별시|광역시|특별자치시|도|특별자치도)?\\s*" +
+                    "(?:특별시|광역시|특별자치시|도|특별자치도|시)?\\s*" +
                     "[가-힣]+(?:시|군|구)\\s+[가-힣0-9\\-\\s]{2,30}(?:동|읍|면|로|길)\\s*\\d+(?:-\\d+)?");
 
     /**
@@ -53,37 +54,38 @@ public class SensitiveDataMasker {
         return masked;
     }
 
-    /**
-     * 뒷 4자리만 남기고 가운데를 *로. 010-1234-5678 → 010-****-5678
-     *
-     * TODO [2단계-B] PHONE_KR Matcher로 순회하며 매칭된 번호를 "010-****-(뒤 4자리)" 로 치환하라.
-     *   힌트: Matcher.appendReplacement + Matcher.quoteReplacement를 사용하면 안전하다.
-     *   raw에서 숫자만 뽑으려면 raw.replaceAll("\\D", "").
-     */
+    /** 뒷 4자리만 남기고 가운데를 *로. 010-1234-5678 → 010-****-5678 */
     private String maskPhone(String text) {
-        // TODO [2단계-B] 전화번호 마스킹 구현
-        return text;
+        Matcher m = PHONE_KR.matcher(text);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            String digits = m.group().replaceAll("\\D", "");
+            String last4 = digits.substring(digits.length() - 4);
+            m.appendReplacement(sb, Matcher.quoteReplacement("010-****-" + last4));
+        }
+        m.appendTail(sb);
+        return sb.toString();
     }
 
-    /**
-     * name@domain.com → n***@domain.com
-     *
-     * TODO [2단계-C] EMAIL Matcher로 순회하며 '@' 앞 로컬 파트의 첫 글자만 남기고 "***"로 치환하라.
-     *   로컬 파트 길이가 1 이하면 전체를 "*" 로.
-     */
+    /** name@domain.com → n***@domain.com */
     private String maskEmail(String text) {
-        // TODO [2단계-C] 이메일 마스킹 구현
-        return text;
+        Matcher m = EMAIL.matcher(text);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            String email = m.group();
+            int atIdx = email.indexOf('@');
+            String local = email.substring(0, atIdx);
+            String domain = email.substring(atIdx);
+            String masked = local.length() <= 1 ? "*" + domain : local.charAt(0) + "***" + domain;
+            m.appendReplacement(sb, Matcher.quoteReplacement(masked));
+        }
+        m.appendTail(sb);
+        return sb.toString();
     }
 
-    /**
-     * 주소는 전체를 "[주소 비공개]"로 대체.
-     *
-     * TODO [2단계-D] ROAD_ADDRESS.matcher(text).replaceAll(...) 한 줄이면 충분하다.
-     */
+    /** 주소는 전체를 "[주소 비공개]"로 대체. */
     private String maskAddress(String text) {
-        // TODO [2단계-D] 주소 마스킹 구현
-        return text;
+        return ROAD_ADDRESS.matcher(text).replaceAll("[주소 비공개]");
     }
 
     /**

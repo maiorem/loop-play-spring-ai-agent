@@ -1,43 +1,46 @@
 package com.baedal.support;
 
+import com.baedal.support.guardrail.GuardrailResult;
+import com.baedal.support.guardrail.HandoffDetector;
+import com.baedal.support.guardrail.InputGuardrailAdvisor;
+import com.baedal.support.guardrail.OutputGuardrailAdvisor;
 import com.baedal.support.tool.OrderTools;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
- * Structured Output + Tool Calling + Chat Memory + RAG 통합 엔드포인트.
- * <p>
- * 4주차 변경점: {@link QuestionAnswerAdvisor}(order=20)를 체인에 추가한다.
- * Triage 응답도 정책/FAQ 근거가 있으면 더 정확한 카테고리/다음 액션을 반환한다.
- * <p>
- * ⚠️ {@link ChatClient.Builder}는 싱글톤 빈이므로 핸들러 내부에서
- * {@code .defaultXxx()}를 매 요청마다 호출하면 누적된다. 생성자에서 한 번만 빌드해 재사용한다.
+ * Structured Output + Tool Calling + Chat Memory + RAG + Guardrail 통합 엔드포인트.
+ *
+ * Advisor 체인 순서: InputGuardrail(5) → Memory(10) → RAG(20) → OutputGuardrail(50) → Performance(100)
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/support")
 public class SupportController {
 
     private final ChatClient chatClient;
+    private final InputGuardrailAdvisor inputGuardrail;
+    private final HandoffDetector handoffDetector;
 
-    // TODO [1단계-I] SupportController에도 동일한 Advisor 체인(memory → rag → performance)을 적용하라.
-    //
-    // 요구사항: 아래 생성자의 .defaultAdvisors(...)를 다음과 같이 바꾼다.
-    //   .defaultAdvisors(memoryAdvisor, ragAdvisor, performanceAdvisor)
-    //
-    // AssistantController와 완전히 동일한 순서여야 한다 — 두 엔드포인트가
-    // 같은 정책 지식과 같은 대화 맥락을 공유해야 일관된 상담이 된다.
     public SupportController(ChatClient.Builder builder,
                              PerformanceLoggingAdvisor performanceAdvisor,
                              MessageChatMemoryAdvisor memoryAdvisor,
                              QuestionAnswerAdvisor ragAdvisor,
+                             InputGuardrailAdvisor inputGuardrail,
+                             OutputGuardrailAdvisor outputGuardrail,
+                             HandoffDetector handoffDetector,
                              OrderTools orderTools) {
+        this.inputGuardrail = inputGuardrail;
+        this.handoffDetector = handoffDetector;
         this.chatClient = builder
                 .defaultSystem(BaedalPrompt.SYSTEM_PROMPT)
-                // TODO: ragAdvisor를 memoryAdvisor 다음, performanceAdvisor 앞에 추가하라.
-                .defaultAdvisors(memoryAdvisor, performanceAdvisor)
+                .defaultAdvisors(inputGuardrail, memoryAdvisor, ragAdvisor, outputGuardrail, performanceAdvisor)
                 .defaultTools(orderTools)
                 .build();
     }
@@ -45,10 +48,67 @@ public class SupportController {
     @PostMapping
     public SupportResponse triage(@RequestBody ChatRequest req,
                                   @RequestHeader(value = "X-Session-Id", defaultValue = "default") String sessionId) {
-        return chatClient.prompt()
-                .user(req.message())
-                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, sessionId))
-                .call()
-                .entity(SupportResponse.class);
+
+        log.info("[Support] sessionId={}, message={}", sessionId, req.message());
+
+        // Spring AI가 .user("") 시점에 예외를 던지므로 체인 진입 전에 먼저 차단
+        GuardrailResult guardrailResult = inputGuardrail.check(req.message());
+        if (!guardrailResult.allowed()) {
+            log.warn("[Support/InputGuardrail] 차단 — reason={}", guardrailResult.reason());
+            return blocked(guardrailResult);
+        }
+
+        // LLM 호출 전 상담원 전환 선검사
+        HandoffDetector.HandoffDecision handoff = handoffDetector.detect(req.message());
+        if (handoff.handoff()) {
+            log.info("[Support] Handoff 감지 — reason={}", handoff.reason());
+            return new SupportResponse(
+                    handoff.message(),
+                    SupportResponse.Category.ETC,
+                    SupportResponse.Urgency.HIGH,
+                    "상담원 연결 진행",
+                    List.of(),
+                    SupportResponse.CustomerSentiment.FRUSTRATED,
+                    0,
+                    true
+            );
+        }
+
+        try {
+            return chatClient.prompt()
+                    .user(req.message())
+                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, sessionId))
+                    .call()
+                    .entity(SupportResponse.class);
+        } catch (Exception e) {
+            return fallback(e);
+        }
+    }
+
+    private SupportResponse blocked(GuardrailResult result) {
+        return new SupportResponse(
+                result.fallbackMessage(),
+                SupportResponse.Category.ETC,
+                SupportResponse.Urgency.LOW,
+                "입력 재요청",
+                List.of(),
+                SupportResponse.CustomerSentiment.NEUTRAL,
+                0,
+                false
+        );
+    }
+
+    private SupportResponse fallback(Exception e) {
+        log.error("[Support] 처리 중 오류 발생 — {}", e.getMessage(), e);
+        return new SupportResponse(
+                "죄송해요, 일시적인 오류가 발생했어요. 상담원(1600-0987)에게 문의해 주세요.",
+                SupportResponse.Category.ETC,
+                SupportResponse.Urgency.HIGH,
+                "상담원 연결 권장",
+                List.of(),
+                SupportResponse.CustomerSentiment.NEUTRAL,
+                0,
+                true
+        );
     }
 }
