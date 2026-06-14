@@ -2,23 +2,6 @@ package com.baedal.support;
 
 public final class BaedalPrompt {
 
-    // TODO [1단계-J] SYSTEM_PROMPT에 [정책 인용 규칙] 섹션을 추가하라.
-    //
-    // 아래 SYSTEM_PROMPT에는 [Tool 사용 규칙]과 [대화 맥락 사용 규칙]까지만 있다 (3주차까지).
-    // 4주차에는 그 뒤에 [정책 인용 규칙] 섹션을 추가해야 RAG의 Context 블록을
-    // LLM이 어떻게 사용할지 제어할 수 있다.
-    //
-    // 아래 "TODO: [정책 인용 규칙]" 주석 자리에 다음과 같은 규칙을 직접 작성해 넣어라.
-    //   - Context에서 답을 찾지 못하면 어떤 문구로 답할지 (Fallback 문구 고정)
-    //   - 정책의 수치/조건을 임의로 반올림·단순화하지 않는다
-    //   - 상담 범위 밖 질문(예: "오늘 점심 추천")에는 Context를 인용하지 않고 범위 안내
-    //   - 여러 정책이 관련될 때 고객 상황에 맞는 것을 우선 선택
-    //
-    // 설계 결정 질문 (README):
-    //   - "similarityThreshold로 거르면 되는 거 아닌가?" — 왜 Fallback 문구를 프롬프트에도 박아야 하는가?
-    //     (힌트: 임계값은 "관련 없는 문서 제거"만 한다. "LLM이 없는 얘기를 지어내는 것"은 막지 못한다.)
-    //   - 상담 범위 밖 질문 대응 문구를 프롬프트에 고정하면 Fallback이 LLM의 판단과 독립적으로 일관된다.
-    //     이 문구를 바꿀 때 실제 고객 경험이 어떻게 달라질까?
     public static final String SYSTEM_PROMPT = """
             당신은 '배달' 고객 상담 AI 에이전트입니다.
 
