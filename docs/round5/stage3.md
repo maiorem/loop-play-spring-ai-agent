@@ -18,7 +18,7 @@
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/assistant \
   -H "Content-Type: application/json" \
-  -H "X-Session-Id: hand-1" \
+  -H "X-Session-Id: hand-1-time" \
   -d "{\"message\":\"상담원이랑 직접 얘기하고 싶어요\"}"
 ```
 
@@ -32,11 +32,11 @@ curl -s -X POST http://localhost:8080/api/v1/assistant \
 **서버 로그**
 
 ```
-INFO  [Assistant] sessionId=hand-1, message=상담원이랑 직접 얘기하고 싶어요
-INFO  [Assistant] Handoff 감지 — reason=EXPLICIT_REQUEST
+2026-06-14T17:00:50.821+09:00 INFO  [Assistant] sessionId=hand-1-time, message=상담원이랑 직접 얘기하고 싶어요
+2026-06-14T17:00:50.822+09:00 INFO  [Assistant] Handoff 감지 — reason=EXPLICIT_REQUEST
 ```
 
-> `LLM 호출 완료` 로그가 찍히지 않았다. 컨트롤러 레벨에서 `handoffDetector.detect()`가 `EXPLICIT_REQUEST`를 반환하고 즉시 메시지를 돌려보냈다. `InputGuardrailAdvisor`, `MessageChatMemoryAdvisor`, `QuestionAnswerAdvisor` 등 Advisor 체인 전체가 실행되지 않아 Memory 조회, RAG 임베딩, LLM 생성 비용이 모두 0이다. 정상 Tool 호출 케이스(시나리오 4, 274,872ms)와 비교하면 이 응답은 수십만 배 빠르다. 고객이 "상담원 연결"을 원하는 순간 AI가 답변을 생성하는 것은 오히려 장애물이 된다. 즉각 이탈 처리로 고객 경험과 시스템 비용을 모두 줄일 수 있다.
+> `LLM 호출 완료` 로그가 찍히지 않았다. 컨트롤러 레벨에서 `handoffDetector.detect()`가 `EXPLICIT_REQUEST`를 반환하고 즉시 메시지를 돌려보냈다. 서버 로그 기준 요청 로그와 Handoff 감지 로그 차이는 1ms다. `InputGuardrailAdvisor`, `MessageChatMemoryAdvisor`, `QuestionAnswerAdvisor` 등 Advisor 체인 전체가 실행되지 않아 Memory 조회, RAG 임베딩, LLM 생성 비용이 모두 0이다. 정상 Tool 호출 케이스(56,116ms)와 비교하면 이 응답은 수만 배 빠르다. 고객이 "상담원 연결"을 원하는 순간 AI가 답변을 생성하는 것은 오히려 장애물이 된다. 즉각 이탈 처리로 고객 경험과 시스템 비용을 모두 줄일 수 있다.
 
 ---
 
@@ -94,16 +94,16 @@ INFO  [Assistant] sessionId=hand-3, message=나 너무 화나는데 답답해 �
 INFO  [Assistant] Handoff 감지 — reason=HIGH_EMOTION
 ```
 
-> `ANGER_PATTERNS`의 "화나", "죽겠"에 매칭됐다. 응답이 "많이 불편하셨을 것 같아 진심으로 죄송합니다"로 시작하는 이유는 `HandoffDecision.handoff(HandoffReason.HIGH_EMOTION, ...)`에 공감 문구가 하드코딩돼 있기 때문이다. LLM 없이 < 1ms 응답이 나왔지만, 이 문구는 항상 고정이다. LLM 방식과 비교하면 속도는 규칙 기반이 압도적이지만 감정 공명 품질은 LLM이 높다. "극도로 화가 난 고객"에게 고정 문구가 충분한가는 서비스 맥락과 운영 비용을 함께 고려해 결정할 문제다.
+> `ANGER_PATTERNS`의 "화나", "죽겠"에 매칭됐다. 응답이 "많이 불편하셨을 것 같아 진심으로 죄송합니다"로 시작하는 이유는 `HandoffDecision.handoff(HandoffReason.HIGH_EMOTION, ...)`에 공감 문구가 하드코딩돼 있기 때문이다. LLM 호출 없이 즉시 반환되지만, 이 문구는 항상 고정이다. LLM 방식과 비교하면 속도는 규칙 기반이 압도적이지만 감정 공명 품질은 LLM이 높다. "극도로 화가 난 고객"에게 고정 문구가 충분한가는 서비스 맥락과 운영 비용을 함께 고려해 결정할 문제다.
 
 ---
 
 ### 시나리오 4 — 정상 상담 (비교용)
 
-시나리오 6 (out-6) 참조: `2024-1234 주문 어디쯤 왔어요?`
+stage2의 `out-order-no-fp` 참조: `2024-1234 주문 어디쯤 왔어요?`
 
 ```
-LLM 호출 완료 — 274872ms | 입력 토큰: 2887 | 출력 토큰: 117 | 총 토큰: 3004
+LLM 호출 완료 — 56116ms | 입력 토큰: 2887 | 출력 토큰: 117 | 총 토큰: 3004
 ```
 
 ---
@@ -112,13 +112,13 @@ LLM 호출 완료 — 274872ms | 입력 토큰: 2887 | 출력 토큰: 117 | 총 
 
 | 시나리오 | 트리거 | 응답 시간 | LLM 호출 | 연결 번호 포함 |
 |---|---|---|---|---|
-| 1 (상담원 요청) | EXPLICIT_REQUEST | < 1ms | ❌ | ✅ |
-| 2 (소비자원 신고) | LEGAL_ISSUE | < 1ms | ❌ | ✅ |
-| 3 (감정 분노) | HIGH_EMOTION | < 1ms | ❌ | ✅ |
-| 4 (정상 Tool 호출) | — | 274,872ms | ✅ | — |
+| 1 (상담원 요청) | EXPLICIT_REQUEST | 로그 기준 1ms | ❌ | ✅ |
+| 2 (소비자원 신고) | LEGAL_ISSUE | 즉시 반환(LLM 로그 없음) | ❌ | ✅ |
+| 3 (감정 분노) | HIGH_EMOTION | 즉시 반환(LLM 로그 없음) | ❌ | ✅ |
+| 4 (정상 Tool 호출) | — | 56,116ms | ✅ | — |
 
 > Handoff 케이스는 `PerformanceLoggingAdvisor` 로그 자체가 찍히지 않는다 (LLM 미호출).
-> 정상 케이스 대비 응답 속도 차이: 수십만 배 이상. (Windows 기준)
+> 정상 케이스 대비 응답 속도 차이: 시나리오 1 기준 약 56,000배. (Windows 기준)
 
 ---
 
@@ -129,7 +129,7 @@ LLM 호출 완료 — 274872ms | 입력 토큰: 2887 | 출력 토큰: 117 | 총 
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/support \
   -H "Content-Type: application/json" \
-  -H "X-Session-Id: support-h" \
+  -H "X-Session-Id: support-h-time" \
   -d "{\"message\":\"상담원 연결해 주세요\"}"
 ```
 
@@ -148,7 +148,14 @@ curl -s -X POST http://localhost:8080/api/v1/support \
 }
 ```
 
-> `category=ETC`, `urgency=HIGH`, `requiresHumanAgent=true`, 세 필드 모두 스키마대로 반환됐다. `SupportController`는 Handoff 발동 시 LLM을 호출하지 않고 `SupportResponse`를 직접 조립했다. `category=ETC`는 아직 문의 분류가 이루어지지 않은 상태를 의미하고, `urgency=HIGH`는 지연 없는 상담원 연결이 필요하다는 신호다. `requiresHumanAgent=true`가 JSON 필드로 포함됨으로써 이 응답을 소비하는 상위 라우팅 시스템이 별도 파싱 없이 즉시 상담원 큐에 넣을 수 있다. Structured Output의 핵심 가치는 "고객에게 전달하는 자연어"가 아니라 "시스템이 읽는 결정 신호"를 함께 생산하는 것이다.
+**서버 로그**
+
+```
+2026-06-14T17:01:01.057+09:00 INFO  [Support] sessionId=support-h-time, message=상담원 연결해 주세요
+2026-06-14T17:01:01.057+09:00 INFO  [Support] Handoff 감지 — reason=EXPLICIT_REQUEST
+```
+
+> `category=ETC`, `urgency=HIGH`, `requiresHumanAgent=true`, 세 필드 모두 스키마대로 반환됐다. `SupportController`는 Handoff 발동 시 LLM을 호출하지 않고 `SupportResponse`를 직접 조립했다. 요청 로그와 Handoff 감지 로그가 같은 밀리초에 찍혔고, `LLM 호출 완료` 로그는 없다. `category=ETC`는 아직 문의 분류가 이루어지지 않은 상태를 의미하고, `urgency=HIGH`는 지연 없는 상담원 연결이 필요하다는 신호다. `requiresHumanAgent=true`가 JSON 필드로 포함됨으로써 이 응답을 소비하는 상위 라우팅 시스템이 별도 파싱 없이 즉시 상담원 큐에 넣을 수 있다. Structured Output의 핵심 가치는 "고객에게 전달하는 자연어"가 아니라 "시스템이 읽는 결정 신호"를 함께 생산하는 것이다.
 
 ---
 
